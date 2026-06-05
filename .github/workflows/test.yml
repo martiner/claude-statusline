@@ -1,0 +1,21 @@
+name: Tests
+
+on:
+  push:
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bash version
+        run: bash --version | head -1
+
+      - name: Run tests
+        run: bash test-statusline.sh ./statusline.sh
