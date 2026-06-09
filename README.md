@@ -24,12 +24,12 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 - **Model & effort** — model name, optionally followed by the effort level (`model • high`, `model • xhigh`, …) when available.
 - **Context & cost** — current context window usage and session cost, grouped together because both reset with `/clear`.
 - **5h window** (Pro/Max) — `5h: N% • TIME` showing percent used and time until reset.
-- **7d window** (Pro/Max) — a rich indicator with a progress bar and daily pace: `7d: ELAPSED used N% █████░░░░░ REMAINING left | avg X%/d • Y%/d left`. `avg` is your current burn rate; `%/d left` is the daily ceiling you can stay under to make it to the reset.
-- **Monthly limit** (Enterprise) — `M: $spent Nd used PCT% █████░░░░░ $remaining Md left | avg $X/d • $Y/d left`, sourced from the OAuth usage endpoint (see [caveats](#caveats)).
+- **7d window** (Pro/Max) — a rich indicator over the rolling 7-day window: `7d: ELAPSED used N% █████░░░░░ REMAINING left`.
+- **Monthly limit** (Enterprise) — `M: $spent Nd used PCT% █████░░░░░ $remaining Md left`, sourced from the OAuth usage endpoint (see [caveats](#caveats)).
+- **Progress bar** — 10 Unicode blocks that split *used* from *left*, visually representing the percentage (shown in the 7d and monthly segments).
+- **Daily pace** — answers "how much do I have per day" for the current billing window: `avg` is your current burn rate; `%/d left` (or `$/d left`) is the daily ceiling you can stay under to make it to the reset.
 - **Color coding** — green below 50%, yellow 50–79%, red at 80%+ on context, 5h, 7d, and monthly values.
 - **Graceful degradation** — segments that don't apply to your account type are hidden. After Claude Code starts, before real data arrives, windows show `?` instead of a misleading `0%`.
-
-The progress bar (10 Unicode blocks) splits *used* from *left* and visually represents the percentage. The daily-pace figures answer "how much do I have per day" for the current billing window.
 
 ## Installation
 
