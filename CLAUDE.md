@@ -33,6 +33,7 @@ Helper functions at the top encapsulate the pure formatting logic: `color_by_pct
 - **Cents, not dollars**: `extra_usage.monthly_limit`/`used_credits` are in cents despite a `currency: "USD"` field; the script divides by 100.
 - **Placeholder state**: right after Claude Code starts, rate-limit windows arrive as `pct=0, reset≈now`. The script shows `?` rather than a misleading `0%`. Don't "fix" this into 0%.
 - **Numeric math in `awk`**, not bash, for any non-integer (dollar pace, percentages).
+- **`export LC_NUMERIC=C` at the top is load-bearing**: a comma-decimal locale (cs_CZ, de_DE, …) makes bash `printf '%.0f' "42.5"` fail with "invalid number" (→ `ctx 0%`) and awk emit commas (→ `s: $0,00`). Set in-script so it holds regardless of the launch command. Don't remove it. Section 8 of the test suite guards this (skips if no comma locale is installed).
 - **Test env overrides**: `CLAUDE_STATUSLINE_TODAY` and `CLAUDE_STATUSLINE_MONTH_DAYS` exist only so date-dependent output is deterministic in tests; production reads from `date`.
 
 ## Testing model

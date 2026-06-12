@@ -1,6 +1,12 @@
 #!/bin/bash
 # Claude Code custom status line — see README.md for output format and features.
 
+# Force a C numeric locale so the decimal separator is always '.'. Without this,
+# a comma-decimal locale (e.g. cs_CZ, de_DE) makes `printf '%.0f' "42.5"` fail
+# with "invalid number" (it expects "42,5") and makes awk emit "$0,00" — a wrong
+# context % and cost. Set in-script so it works regardless of the launch command.
+export LC_NUMERIC=C
+
 input=$(cat)
 
 # === Color by usage percentage ===

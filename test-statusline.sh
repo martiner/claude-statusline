@@ -602,6 +602,38 @@ OUT=$(run_with_date 17 31 "{
 assert_contains "no resets_at: used days from calendar" "M: 17d used 12%"  "$OUT"
 assert_contains "no resets_at: left days from calendar" "14d left"         "$OUT"
 
+# ─── 8. Locale independence (comma decimal separator) ───────────────────────
+echo ""
+echo "[8] Comma-decimal locale (issue: ctx 0%, \$0,00)"
+set_cache ""
+
+# Find a locale whose decimal separator is a comma (cs_CZ, de_DE, …). Without
+# the in-script LC_NUMERIC=C, such a locale makes `printf '%.0f' 42.5` fail
+# ("invalid number") and awk emit commas. If none is installed (some minimal CI
+# images), skip — we can't reproduce the bug, and asserting under a C locale
+# would pass even on a regressed script (false green).
+COMMA_LOCALE=""
+for loc in cs_CZ.UTF-8 de_DE.UTF-8 fr_FR.UTF-8 nl_NL.UTF-8 pt_BR.UTF-8; do
+    if [ "$(LC_ALL= LC_NUMERIC="$loc" locale decimal_point 2>/dev/null)" = "," ]; then
+        COMMA_LOCALE="$loc"; break
+    fi
+done
+
+if [ -z "$COMMA_LOCALE" ]; then
+    printf '  %s· skipped: no comma-decimal locale installed%s\n' "$DIM" "$RESET"
+else
+    OUT=$(echo "{
+      \"model\":{\"display_name\":\"x\"},
+      \"workspace\":{\"current_dir\":\"$REPO\"},
+      \"context_window\":{\"used_percentage\":42.5},
+      \"cost\":{\"total_cost_usd\":1.23}
+    }" | LC_ALL= LC_NUMERIC="$COMMA_LOCALE" HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null | strip_ansi)
+    assert_contains    "comma locale: ctx % still correct" "ctx 42%"  "$OUT"
+    assert_contains    "comma locale: cost uses '.'"       "s: \$1.23" "$OUT"
+    assert_not_contains "comma locale: no 'ctx 0%'"        "ctx 0%"   "$OUT"
+    assert_not_contains "comma locale: no comma in cost"   "\$1,"     "$OUT"
+fi
+
 # ─── Summary ─────────────────────────────────────────────────────────────────
 echo ""
 TOTAL=$((PASS+FAIL))
