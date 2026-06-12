@@ -33,17 +33,39 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 
 ## Installation
 
-1. Copy `statusline.sh` to `~/.claude/statusline.sh`.
-2. Add the following to `~/.claude/settings.json`:
+Both options end with `~/.claude/statusline.sh` in place and the same `settings.json` entry; pick based on whether you want to track upstream updates.
 
-   ```json
-   {
-     "statusLine": {
-       "type": "command",
-       "command": "bash ~/.claude/statusline.sh"
-     }
-   }
-   ```
+### Option A — clone and symlink (recommended, keeps the script updatable)
+
+Clone the repo and symlink the script into `~/.claude/`:
+
+```bash
+git clone https://github.com/martiner/claude-statusline.git
+ln -s "$(pwd)/claude-statusline/statusline.sh" ~/.claude/statusline.sh
+```
+
+To update later, just `git pull` in the clone — the symlink picks up the new version automatically:
+
+```bash
+git -C claude-statusline pull
+```
+
+### Option B — copy the file
+
+Copy `statusline.sh` to `~/.claude/statusline.sh`. Simpler, but updates mean re-copying the file by hand.
+
+### Wire it up
+
+With either option, add the following to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh"
+  }
+}
+```
 
 ### Requirements
 
