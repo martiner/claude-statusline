@@ -190,19 +190,38 @@ else
             common_abs=$(cd "$cwd" 2>/dev/null && cd "$common_raw" 2>/dev/null && pwd)
             if [ -n "$common_abs" ] && [ "$git_dir" != "$common_abs" ]; then
                 dir_display=$(basename "$(dirname "$common_abs")")
+                is_worktree=1
+                # git keeps the worktree under .git/worktrees/<name>; basename of
+                # the per-worktree git dir is that name (robust even if cwd is a subdir).
+                worktree_name=$(basename "$git_dir")
             fi
         fi
     fi
 fi
 
 # === Git branch ===
+# branch holds the bare ref (branch name, or short SHA when detached); is_detached
+# distinguishes the two so the @-prefix convention only marks a real detached HEAD.
 branch=""
+is_detached=""
 if [ -n "$cwd" ] && [ "$cwd" != "-" ] && [ -d "$cwd" ]; then
     branch=$(git -C "$cwd" --no-optional-locks branch --show-current 2>/dev/null)
     if [ -z "$branch" ]; then
-        sha=$(git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null)
-        [ -n "$sha" ] && branch="@${sha}"
+        branch=$(git -C "$cwd" --no-optional-locks rev-parse --short HEAD 2>/dev/null)
+        [ -n "$branch" ] && is_detached=1
     fi
+fi
+# In a worktree, prefix the worktree name so it's distinguishable from the main
+# repo: wt-name@branch, or wt-name@<sha> when detached. Outside a worktree, a
+# detached HEAD keeps the plain @<sha> form.
+if [ -n "$is_worktree" ] && [ -n "$worktree_name" ]; then
+    if [ -n "$branch" ]; then
+        branch="${worktree_name}@${branch}"
+    else
+        branch="$worktree_name"
+    fi
+elif [ -n "$is_detached" ]; then
+    branch="@${branch}"
 fi
 
 # === Build output — segments are appended conditionally ===

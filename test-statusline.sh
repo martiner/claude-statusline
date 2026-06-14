@@ -507,10 +507,25 @@ OUT=$(run_script "{
   \"cost\":{\"total_cost_usd\":0}
 }")
 assert_contains    "worktree: 1st item = project name" "parent-proj"          "$OUT"
-assert_not_contains "worktree: no 'worktree-feat-x'"   "worktree-feat-x"      "$OUT"
-assert_contains    "worktree: branch is 'feat-x'"      "feat-x"               "$OUT"
+assert_contains    "worktree: branch is 'worktree-feat-x@feat-x'" "worktree-feat-x@feat-x" "$OUT"
 
-# Main repo (not a worktree) — basename(cwd) stays
+# Detached HEAD inside a worktree → wt-name@<sha> (distinguishable from a
+# detached HEAD in the main repo, which is plain @<sha>)
+(
+    cd "$WT_PROJ"
+    git worktree add -q --detach ./.claude/worktrees/worktree-det HEAD 2>/dev/null
+) >/dev/null 2>&1
+WT_DET="$WT_PROJ/.claude/worktrees/worktree-det"
+DET_SHA=$(git -C "$WT_DET" rev-parse --short HEAD)
+OUT=$(run_script "{
+  \"model\":{\"display_name\":\"x\"},
+  \"workspace\":{\"current_dir\":\"$WT_DET\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0}
+}")
+assert_contains "detached worktree → wt-name@<sha>" "worktree-det@${DET_SHA}" "$OUT"
+
+# Main repo (not a worktree) — basename(cwd) stays, no worktree prefix
 OUT=$(run_script "{
   \"model\":{\"display_name\":\"x\"},
   \"workspace\":{\"current_dir\":\"$WT_PROJ\"},

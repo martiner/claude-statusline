@@ -20,7 +20,7 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 
 ## Features
 
-- **Directory & branch** — basename of the working directory (`$HOME` shown as `~`), plus the current git branch. Inside a git worktree the main repo's name is shown instead of the worktree slug. Detached HEAD shows as `@<sha>`; outside a repo the branch is omitted.
+- **Directory & branch** — basename of the working directory (`$HOME` shown as `~`), plus the current git branch. Inside a git worktree the main repo's name is shown as the directory, and the branch is prefixed with the worktree name so it's distinguishable from the main repo: `wt-name@branch`, or `wt-name@<sha>` when detached. Detached HEAD in the main repo shows as `@<sha>`; outside a repo the branch is omitted.
 - **Model & effort** — model name, optionally followed by the effort level (`model • high`, `model • xhigh`, …) when available.
 - **Context & cost** — current context window usage and session cost, grouped together because both reset with `/clear`.
 - **5h window** (Pro/Max) — `5h: N% • TIME` showing percent used and time until reset.
