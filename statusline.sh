@@ -57,7 +57,7 @@ IFS=$'\t' read -r model effort cwd ctx_pct cost five_pct five_reset week_pct wee
             (.rate_limits.seven_day.used_percentage   // 0),
             (.rate_limits.seven_day.resets_at         // 0)
         ] | @tsv
-    '
+    ' | tr -d '\r'
 )
 
 # Sanitize numeric fields — jq sometimes emits empty strings for null
@@ -83,7 +83,7 @@ fetch_usage() {
         [ -r "$HOME/.claude/.credentials.json" ] || return 1
         creds=$(<"$HOME/.claude/.credentials.json")
     fi
-    token=$(echo "$creds" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null)
+    token=$(echo "$creds" | jq -r '.claudeAiOauth.accessToken // empty' 2>/dev/null | tr -d '\r')
     [ -z "$token" ] && return 1
 
     response=$(curl -s --max-time 2 "https://api.anthropic.com/api/oauth/usage" \
@@ -128,7 +128,7 @@ if [ -f "$USAGE_CACHE" ]; then
             (.extra_usage.utilization   // 0),
             (.extra_usage.monthly_limit // ""),
             (.extra_usage.used_credits  // "")
-        ' "$USAGE_CACHE" 2>/dev/null
+        ' "$USAGE_CACHE" 2>/dev/null | tr -d '\r'
     )
     m_enabled="${m_fields[0]:-}"
     m_util="${m_fields[1]:-0}"

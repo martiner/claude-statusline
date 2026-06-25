@@ -71,7 +71,8 @@ With either option, add the following to `~/.claude/settings.json`:
 
 - `jq`, `curl`, `git`, `date`
 - Claude Code **v1.2.80+** (needed for the `rate_limits` field in the stdin JSON)
-- macOS or Linux/WSL. On macOS the OAuth token is read from the Keychain (`security find-generic-password -s "Claude Code-credentials"`); on Linux/WSL from `~/.claude/.credentials.json`.
+- macOS, Linux/WSL, or Windows. On macOS the OAuth token is read from the Keychain (`security find-generic-password -s "Claude Code-credentials"`); on Linux/WSL/Windows from `~/.claude/.credentials.json`.
+- On native Windows the script runs under the Git Bash that ships with Git for Windows, and `jq` (e.g. installed via `winget`) must be on `PATH`.
 
 ## Configuration
 
