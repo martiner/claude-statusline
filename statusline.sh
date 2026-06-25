@@ -30,6 +30,28 @@ make_bar() {
     printf '%s' "$bar"
 }
 
+# === Single-char vertical bar — one of ▁▂▃▄▅▆▇█ by fill level (8ths) ===
+# Mirrors the 7d █/░ bar: the glyph's filled bottom N/8 inherits the segment fg
+# (the normal green/yellow/red from color_by_pct = like █), and the cell gets a
+# pale track background of the same hue (= like the light ░), so the unfilled
+# part shows. Reset only the bg afterwards (\033[49m) so trailing segment text
+# keeps its fg. The pale shades need 256-colour (16-colour "bright" backgrounds
+# are saturated, not pale, so they wouldn't match the 7d bar). Nearest level,
+# clamped ≥1 so any usage shows at least the thinnest block.
+vbar() {
+    local pct=${1%.*}; [ -z "$pct" ] && pct=0
+    local level=$(( (pct * 8 + 50) / 100 ))
+    (( level < 1 )) && level=1
+    (( level > 8 )) && level=8
+    local chars=(▁ ▂ ▃ ▄ ▅ ▆ ▇ █)
+    local bg   # pale track matching the 50/80 fg thresholds of color_by_pct
+    if   [ "$pct" -ge 80 ]; then bg=224   # pale red
+    elif [ "$pct" -ge 50 ]; then bg=229   # pale yellow
+    else                         bg=194   # pale green
+    fi
+    printf '\033[48;5;%sm%s\033[49m' "$bg" "${chars[level-1]}"
+}
+
 # === Seconds → "2h15m" / "45m" / "4d12h" ===
 format_duration() {
     local secs=$1
@@ -243,7 +265,7 @@ else
     parts+=("$(printf '\033[90m%s\033[0m' "$model")")
 fi
 # ctx and session cost both belong to the current session (reset with /clear) → group with a bullet
-session_part="$(color_by_pct "$ctx_pct" "ctx ${ctx_pct_int}%")${bullet}$(printf '\033[36m%s\033[0m' "$cost_fmt")"
+session_part="$(color_by_pct "$ctx_pct" "ctx ${ctx_pct_int}% $(vbar "$ctx_pct")")${bullet}$(printf '\033[36m%s\033[0m' "$cost_fmt")"
 parts+=("$session_part")
 
 # 5h/7d windows — only if resets_at is in the future (else Enterprise or inactive).
@@ -296,8 +318,8 @@ add_window_segment() {
         [ -n "$pace" ] && parts+=("$(color_by_pct "$pct" "$pace")")
         return
     fi
-    # Simple form (5h): pct + time remaining.
-    parts+=("$(color_by_pct "$pct" "$prefix: ${pct_int}% • $(format_duration "$secs")")")
+    # Simple form (5h): pct + bar + time remaining.
+    parts+=("$(color_by_pct "$pct" "$prefix: ${pct_int}% $(vbar "$pct") • $(format_duration "$secs")")")
 }
 add_window_segment "5h" "$five_pct" "$five_reset"
 add_window_segment "7d" "$week_pct" "$week_reset" 604800

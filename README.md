@@ -52,7 +52,7 @@ git -C claude-statusline pull
 
 ### Option B — copy the file
 
-Copy `statusline.sh` to `~/.claude/statusline.sh`. Simpler, but updates mean re-copying the file by hand.
+Copy [`statusline.sh`](https://raw.githubusercontent.com/martiner/claude-statusline/refs/heads/master/statusline.sh) to `~/.claude/statusline.sh`. Simpler, but updates mean re-copying the file by hand.
 
 ### Wire it up
 

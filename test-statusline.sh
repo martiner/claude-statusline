@@ -157,7 +157,7 @@ assert_contains    "shows model"                     "Claude Sonnet 4.6"        
 assert_not_contains "no .effort: no bullet after model" "Claude Sonnet 4.6 • "  "$OUT"
 assert_contains    "rounds ctx percentage"           "ctx 12%"                  "$OUT"
 assert_contains    "shows cost"                      "s: \$0.47"                "$OUT"
-assert_matches     "shows 5h window with time"       "5h: 42% • 2h1[45]m"       "$OUT"
+assert_matches     "shows 5h window with time"       "5h: 42% ▃ • 2h1[45]m"     "$OUT"
 assert_matches     "7d: elapsed + used + pct (rich)" "7d: 2d1[23]h used 18%"    "$OUT"
 assert_matches     "7d: progress bar"                "█+░+"                     "$OUT"
 assert_matches     "7d: remaining + left"            "4d1[12]h left"            "$OUT"
@@ -253,7 +253,7 @@ OUT=$(run_script "{
     \"seven_day\":{\"used_percentage\":18,\"resets_at\":$WEEK_RESET}
   }
 }")
-assert_matches      "5h: simple form"                    "5h: 42% • 2h1[45]m"      "$OUT"
+assert_matches      "5h: simple form"                    "5h: 42% ▃ • 2h1[45]m"    "$OUT"
 assert_not_contains "5h: no 'used'"                      "5h: 42% used"            "$OUT"
 
 # ─── 1d. Effort level (model • effort) ───────────────────────────────────────
@@ -566,7 +566,7 @@ OUT=$(run_script "{
     \"seven_day\":{\"used_percentage\":10,\"resets_at\":$WEEK_RESET}
   }
 }")
-if echo "$OUT" | grep -qE '5h: 50% • (29|30)m'; then
+if echo "$OUT" | grep -qE '5h: 50% ▄ • (29|30)m'; then
     PASS=$((PASS+1)); printf '  %s✓%s under an hour: minutes only\n' "$GREEN" "$RESET"
 else
     FAIL=$((FAIL+1)); printf '  %s✗%s under an hour: expected 29m/30m, output: %s\n' "$RED" "$RESET" "$OUT"
