@@ -277,23 +277,41 @@ add_window_segment() {
         # Daily pace as a separate segment (split by the main `sep`, not a bullet).
         # When less than ~a day remains, dividing the remaining budget by a tiny
         # sliver of time overflows past 100%/d (sub-day rate degenerates) → clamp.
-        local pace
-        pace=$(awk -v u="$pct_int" -v l="$pct_left" -v e="$elapsed" -v r="$secs" \
+        # The pace is colored by burn rate vs. the sustainable "left" rate, not by
+        # window fill: green when avg < left (under pace), yellow up to 1.5× over,
+        # red at ≥1.5× or when the window is full (no budget left). awk emits the
+        # ANSI code as a leading tab-separated field so the float ratio math stays
+        # out of bash.
+        local pace_raw pace_code pace
+        pace_raw=$(awk -v u="$pct_int" -v l="$pct_left" -v e="$elapsed" -v r="$secs" \
             'BEGIN{
                 ed = e / 86400
                 rd = r / 86400
                 shown = 0
-                if (ed >= 0.05) { printf "avg %.1f%%/d", u/ed; shown = 1 }
+                pace = ""
+                if (ed >= 0.05) { pace = sprintf("avg %.1f%%/d", u/ed); shown = 1 }
                 if (rd > 0 && l > 0) {
-                    if (shown) printf " • "
+                    if (shown) pace = pace " • "
                     lr = l / rd
-                    if (lr > 100) printf ">100%%/d left"
-                    else          printf "%.1f%%/d left", lr
+                    if (lr > 100) pace = pace ">100%/d left"
+                    else          pace = pace sprintf("%.1f%%/d left", lr)
                 }
+                code = 32
+                if (shown) {
+                    if (l <= 0) code = 31
+                    else {
+                        ratio = (u / ed) / (l / rd)
+                        if      (ratio >= 1.5) code = 31
+                        else if (ratio >= 1.0) code = 33
+                    }
+                }
+                printf "%d\t%s", code, pace
             }')
+        pace_code="${pace_raw%%$'\t'*}"
+        pace="${pace_raw#*$'\t'}"
         # Trim ".0%" to "%": 20.0%/d → 20%/d, 7.7%/d stays.
         pace="${pace//.0%/%}"
-        [ -n "$pace" ] && parts+=("$(color_by_pct "$pct" "$pace")")
+        [ -n "$pace" ] && parts+=("$(printf '\033[%sm%s\033[0m' "$pace_code" "$pace")")
         return
     fi
     # Simple form (5h): pct + time remaining.

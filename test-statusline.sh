@@ -451,6 +451,47 @@ else
     FAIL=$((FAIL+1)); printf '  %s✗%s ctx 75%% should be yellow (ANSI 33)\n' "$RED" "$RESET"
 fi
 
+# ─── 3b. avg pace colored by burn rate vs. sustainable "left" rate ────────────
+# elapsed is fixed at 2.5 days (WEEK_RESET = NOW + 4d12h, rd = 4.5), so
+# ratio = avg/left = 1.8·u/(100−u): green <1.0 (u<35.7), yellow 1.0–1.5
+# (u 35.7–45.5), red ≥1.5 (u≥45.5).
+echo ""
+echo "[3b] avg pace color (ratio avg/left)"
+set_cache ""
+avg_raw() {  # $1 = seven_day used_percentage → raw (un-stripped) output
+    echo "{
+      \"model\":{\"display_name\":\"Claude Sonnet 4.6\"},
+      \"workspace\":{\"current_dir\":\"$REPO\"},
+      \"context_window\":{\"used_percentage\":10},
+      \"cost\":{\"total_cost_usd\":0.1},
+      \"rate_limits\":{
+        \"five_hour\":{\"used_percentage\":10,\"resets_at\":$FIVE_RESET},
+        \"seven_day\":{\"used_percentage\":$1,\"resets_at\":$WEEK_RESET}
+      }
+    }" | HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null
+}
+
+RAW=$(avg_raw 18)   # avg 7.2 < left 18.2 → green (ANSI 32)
+if [[ "$RAW" == *$'\033[32mavg 7'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s avg under pace is green\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s avg under pace should be green (ANSI 32)\n' "$RED" "$RESET"
+fi
+
+RAW=$(avg_raw 40)   # ratio 1.2 → yellow (ANSI 33)
+if [[ "$RAW" == *$'\033[33mavg 16'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s avg slightly over pace is yellow\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s avg slightly over pace should be yellow (ANSI 33)\n' "$RED" "$RESET"
+fi
+
+RAW=$(avg_raw 70)   # ratio 4.2 → red (ANSI 31)
+if [[ "$RAW" == *$'\033[31mavg 28'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s avg far over pace is red\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s avg far over pace should be red (ANSI 31)\n' "$RED" "$RESET"
+fi
+
 # ─── 4. Git states ───────────────────────────────────────────────────────────
 echo ""
 echo "[4] Git detection"
