@@ -242,7 +242,7 @@ if [ -n "$effort" ] && [ "$effort" != "-" ]; then
 else
     parts+=("$(printf '\033[90m%s\033[0m' "$model")")
 fi
-# ctx and session cost both belong to the current session (reset with /clear) → group with a bullet
+# group ctx (context fill, cleared by /clear) and session cost (cumulative, survives /clear) with a bullet
 session_part="$(color_by_pct "$ctx_pct" "ctx ${ctx_pct_int}%")${bullet}$(printf '\033[36m%s\033[0m' "$cost_fmt")"
 parts+=("$session_part")
 

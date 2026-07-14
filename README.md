@@ -22,7 +22,7 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 
 - **Directory & branch** — basename of the working directory (`$HOME` shown as `~`), plus the current git branch. Inside a git worktree the main repo's name is shown as the directory, and the branch is prefixed with the worktree name so it's distinguishable from the main repo: `wt-name@branch`, or `wt-name@<sha>` when detached. Detached HEAD in the main repo shows as `@<sha>`; outside a repo the branch is omitted.
 - **Model & effort** — model name, optionally followed by the effort level (`model • high`, `model • xhigh`, …) when available.
-- **Context & cost** — current context window usage and session cost, grouped together because both reset with `/clear`.
+- **Context & cost** — current context window usage and session cost. `/clear` empties the context but does **not** reset the session cost, which keeps accumulating until you start a new session.
 - **5h window** (Pro/Max) — `5h: N% • TIME` showing percent used and time until reset.
 - **7d window** (Pro/Max) — a rich indicator over the rolling 7-day window: `7d: ELAPSED used N% █████░░░░░ REMAINING left`.
 - **Monthly limit** (Enterprise) — `M: $spent Nd used PCT% █████░░░░░ $remaining Md left`, sourced from the OAuth usage endpoint (see [caveats](#caveats)).
