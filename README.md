@@ -28,7 +28,7 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 - **Monthly limit** (Enterprise) — `M: $spent Nd used PCT% █████░░░░░ $remaining Md left`, sourced from the OAuth usage endpoint (see [caveats](#caveats)).
 - **Progress bar** — 10 Unicode blocks that split *used* from *left*, visually representing the percentage (shown in the 7d and monthly segments).
 - **Daily pace** — answers "how much do I have per day" for the current billing window: `avg` is your current burn rate; `%/d left` (or `$/d left`) is the daily ceiling you can stay under to make it to the reset.
-- **Color coding** — green below 50%, yellow 50–79%, red at 80%+ on context, 5h, 7d, and monthly values.
+- **Color coding** — green below 70%, yellow 70–84%, red at 85%+ on context, 5h, 7d, and monthly values.
 - **Graceful degradation** — segments that don't apply to your account type are hidden. After Claude Code starts, before real data arrives, windows show `?` instead of a misleading `0%`.
 
 ## Installation

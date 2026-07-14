@@ -13,8 +13,8 @@ input=$(cat)
 color_by_pct() {
     local pct_int=${1%.*}; [ -z "$pct_int" ] && pct_int=0
     local text=$2
-    if   [ "$pct_int" -ge 80 ]; then printf '\033[31m%s\033[0m' "$text"
-    elif [ "$pct_int" -ge 50 ]; then printf '\033[33m%s\033[0m' "$text"
+    if   [ "$pct_int" -ge 85 ]; then printf '\033[31m%s\033[0m' "$text"
+    elif [ "$pct_int" -ge 70 ]; then printf '\033[33m%s\033[0m' "$text"
     else                             printf '\033[32m%s\033[0m' "$text"
     fi
 }

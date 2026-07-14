@@ -24,7 +24,7 @@ There is no build, lint, or package step. The only single-test workflow is editi
 2. **Monthly usage (Enterprise only)** — the stdin JSON has no monthly limit, so it's fetched from the undocumented `https://api.anthropic.com/api/oauth/usage` endpoint (`extra_usage` field). The OAuth token comes from the macOS Keychain or `~/.claude/.credentials.json` on Linux/WSL. The response is **cached to a file** (`CLAUDE_STATUSLINE_CACHE`, 60s TTL) to stay within the status line's ~300ms latency budget and the endpoint's own rate limit — see the README "Caveats" before touching this.
 3. **Build output** — segments are pushed into a `parts=()` array and joined with a separator. Segments append conditionally, so account types that lack data (e.g. no 5h/7d window) simply omit those segments.
 
-Helper functions at the top encapsulate the pure formatting logic: `color_by_pct` (green/yellow/red thresholds at 50/80), `make_bar` (10-block Unicode progress bar), `format_duration` (seconds → `2h15m`), and `add_window_segment` (renders 5h/7d windows; the 7d "rich" form with bar + daily pace is selected by passing the period as a 4th arg).
+Helper functions at the top encapsulate the pure formatting logic: `color_by_pct` (green/yellow/red thresholds at 70/85), `make_bar` (10-block Unicode progress bar), `format_duration` (seconds → `2h15m`), and `add_window_segment` (renders 5h/7d windows; the 7d "rich" form with bar + daily pace is selected by passing the period as a 4th arg).
 
 ## Conventions and gotchas to preserve
 

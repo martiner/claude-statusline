@@ -432,23 +432,23 @@ else
     FAIL=$((FAIL+1)); printf '  %s✗%s ctx 18%% should be green (ANSI 32)\n' "$RED" "$RESET"
 fi
 
-# 65% should be yellow (ANSI 33)
-set_cache '{"five_hour":{"utilization":65.0},"seven_day":{"utilization":65.0},"extra_usage":{"is_enabled":false}}'
+# 75% should be yellow (ANSI 33)
+set_cache '{"five_hour":{"utilization":75.0},"seven_day":{"utilization":75.0},"extra_usage":{"is_enabled":false}}'
 RAW=$(echo "{
   \"model\":{\"display_name\":\"Claude Sonnet 4.6\"},
   \"workspace\":{\"current_dir\":\"$REPO\"},
-  \"context_window\":{\"used_percentage\":65},
+  \"context_window\":{\"used_percentage\":75},
   \"cost\":{\"total_cost_usd\":0.1},
   \"rate_limits\":{
-    \"five_hour\":{\"used_percentage\":65,\"resets_at\":$FIVE_RESET},
-    \"seven_day\":{\"used_percentage\":65,\"resets_at\":$WEEK_RESET}
+    \"five_hour\":{\"used_percentage\":75,\"resets_at\":$FIVE_RESET},
+    \"seven_day\":{\"used_percentage\":75,\"resets_at\":$WEEK_RESET}
   }
 }" | HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null)
 
-if [[ "$RAW" == *$'\033[33mctx 65%'* ]]; then
-    PASS=$((PASS+1)); printf '  %s✓%s ctx 65%% is yellow\n' "$GREEN" "$RESET"
+if [[ "$RAW" == *$'\033[33mctx 75%'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s ctx 75%% is yellow\n' "$GREEN" "$RESET"
 else
-    FAIL=$((FAIL+1)); printf '  %s✗%s ctx 65%% should be yellow (ANSI 33)\n' "$RED" "$RESET"
+    FAIL=$((FAIL+1)); printf '  %s✗%s ctx 75%% should be yellow (ANSI 33)\n' "$RED" "$RESET"
 fi
 
 # ─── 4. Git states ───────────────────────────────────────────────────────────
