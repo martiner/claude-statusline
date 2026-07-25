@@ -390,6 +390,45 @@ OUT=$(run_with_date 22 31 "{
 }")
 assert_contains "100%: all full"       "██████████"  "$OUT"
 
+# ─── 2d. Pro — extra usage without a utilization ─────────────────────────────
+echo ""
+echo "[2d] Pro (extra_usage enabled, utilization null)"
+
+# Pro accounts with pay-as-you-go credits report is_enabled:true but no
+# utilization → only the remaining amount, no bar and no pace.
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":1000,"used_credits":0.0}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains     "Pro: \$ left"            "M: \$10 left" "$OUT"
+assert_not_contains "Pro: no progress bar"    "░"            "$OUT"
+assert_not_contains "Pro: no days used"       "d used"       "$OUT"
+assert_not_contains "Pro: no daily pace"      "avg "         "$OUT"
+assert_not_contains "Pro: no '/d left'"       "/d left"      "$OUT"
+
+# Partially spent credits: $30 limit, $12.50 used → $18 left
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":3000,"used_credits":1250}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains "Pro: partially spent"  "M: \$18 left" "$OUT"
+
+# No monthly_limit/used_credits → nothing to show, whole M segment omitted
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_not_contains "Pro: no limit → no M segment"  "M:"  "$OUT"
+
 # ─── 3. Coloring by percentage ───────────────────────────────────────────────
 echo ""
 echo "[3] Color by usage percentage"

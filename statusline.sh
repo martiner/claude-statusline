@@ -115,6 +115,7 @@ fi
 # Read extra_usage (monthly) — only if is_enabled. monthly_limit and
 # used_credits are in cents, converted to USD below.
 month_pct=""; money_used=""; money_left=""; month_daily=""; day_now=""; days_remaining=""
+spent_pct=""
 if [ -f "$USAGE_CACHE" ]; then
     # Can't use `read` with IFS=$'\t': bash collapses adjacent tabs (tab is a
     # whitespace IFS char) so an empty field gets lost. `mapfile` would be
@@ -125,39 +126,46 @@ if [ -f "$USAGE_CACHE" ]; then
     done < <(
         jq -r '
             (.extra_usage.is_enabled    // false),
-            (.extra_usage.utilization   // 0),
+            (.extra_usage.utilization   // ""),
             (.extra_usage.monthly_limit // ""),
             (.extra_usage.used_credits  // "")
         ' "$USAGE_CACHE" 2>/dev/null | tr -d '\r'
     )
     m_enabled="${m_fields[0]:-}"
-    m_util="${m_fields[1]:-0}"
+    m_util="${m_fields[1]:-}"
     m_limit="${m_fields[2]:-}"
     m_used="${m_fields[3]:-}"
     if [ "$m_enabled" = "true" ]; then
+        # Enterprise reports a utilization %; Pro accounts with pay-as-you-go
+        # credits send null, and get the plain "$X left" form below instead.
         month_pct=${m_util%.*}
 
-        # Calendar days: elapsed = day_now, remaining = month_days - day_now.
-        # Env overrides exist for deterministic tests; normally read from `date`.
-        day_now="${CLAUDE_STATUSLINE_TODAY:-$(date +%-d)}"
-        if [ -n "${CLAUDE_STATUSLINE_MONTH_DAYS:-}" ]; then
-            month_days="$CLAUDE_STATUSLINE_MONTH_DAYS"
-        elif [ "$(uname)" = "Darwin" ]; then
-            month_days=$(date -v1d -v+1m -v-1d +%-d 2>/dev/null)
-        else
-            month_days=$(date -d "$(date +%Y-%m-01) +1 month -1 day" +%-d 2>/dev/null)
-        fi
-        days_remaining=$(( month_days - day_now ))
-        [ "$days_remaining" -lt 0 ] && days_remaining=0
-
-        # Dollar amounts (cents → USD, rounded to whole dollars) and daily pace.
+        # Dollar amounts (cents → USD, rounded to whole dollars).
         if [ -n "$m_limit" ] && [ -n "$m_used" ] \
            && [ "$m_limit" != "null" ] && [ "$m_used" != "null" ]; then
             money_used=$(awk -v u="$m_used" 'BEGIN{printf "$%.0f", u/100}')
             money_left=$(awk -v u="$m_used" -v l="$m_limit" \
                 'BEGIN{r = (l - u) / 100; if (r < 0) r = 0; printf "$%.0f", r}')
+            spent_pct=$(awk -v u="$m_used" -v l="$m_limit" \
+                'BEGIN{printf "%d", (l > 0 ? u * 100 / l : 0)}')
+        fi
 
-            month_daily=$(awk -v u="$m_used" -v l="$m_limit" \
+        if [ -n "$month_pct" ]; then
+            # Calendar days: elapsed = day_now, remaining = month_days - day_now.
+            # Env overrides exist for deterministic tests; normally read from `date`.
+            day_now="${CLAUDE_STATUSLINE_TODAY:-$(date +%-d)}"
+            if [ -n "${CLAUDE_STATUSLINE_MONTH_DAYS:-}" ]; then
+                month_days="$CLAUDE_STATUSLINE_MONTH_DAYS"
+            elif [ "$(uname)" = "Darwin" ]; then
+                month_days=$(date -v1d -v+1m -v-1d +%-d 2>/dev/null)
+            else
+                month_days=$(date -d "$(date +%Y-%m-01) +1 month -1 day" +%-d 2>/dev/null)
+            fi
+            days_remaining=$(( month_days - day_now ))
+            [ "$days_remaining" -lt 0 ] && days_remaining=0
+
+            # Daily pace, only with both $ amounts.
+            [ -n "$money_used" ] && month_daily=$(awk -v u="$m_used" -v l="$m_limit" \
                               -v e="$day_now" -v r="$days_remaining" \
                 'BEGIN{
                     if (e <= 0) e = 1
@@ -320,8 +328,9 @@ add_window_segment() {
 add_window_segment "5h" "$five_pct" "$five_reset"
 add_window_segment "7d" "$week_pct" "$week_reset" 604800
 
-# Monthly limit (Enterprise). $ amounts and daily pace only if the cache has
-# both monthly_limit and used_credits.
+# Monthly limit. Enterprise (utilization present) gets the full form; $ amounts
+# and daily pace only if the cache has both monthly_limit and used_credits.
+# Pro (no utilization) gets just the extra-usage credits left.
 if [ -n "$month_pct" ]; then
     bar=$(make_bar "$month_pct")
     label="M:"
@@ -331,6 +340,8 @@ if [ -n "$month_pct" ]; then
     label="${label} ${days_remaining}d left"
     parts+=("$(color_by_pct "$month_pct" "$label")")
     [ -n "$month_daily" ] && parts+=("$(color_by_pct "$month_pct" "$month_daily")")
+elif [ -n "$money_left" ]; then
+    parts+=("$(color_by_pct "$spent_pct" "M: ${money_left} left")")
 fi
 
 # Join segments with the separator

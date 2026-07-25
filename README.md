@@ -2,7 +2,7 @@
 
 A custom statusline for the Claude Code CLI that shows your working directory, git branch, model, context usage, session cost, and — most importantly — your **rate-limit budgets** at a glance.
 
-It supports both personal Pro/Max accounts (5h and 7d rolling windows) and Enterprise accounts (monthly limit).
+It supports both personal Pro/Max accounts (5h and 7d rolling windows) and Enterprise accounts (monthly limit). Pro/Max accounts with pay-as-you-go extra usage enabled also get the remaining credits.
 
 ## Examples
 
@@ -26,6 +26,7 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 - **5h window** (Pro/Max) — `5h: N% • TIME` showing percent used and time until reset.
 - **7d window** (Pro/Max) — a rich indicator over the rolling 7-day window: `7d: ELAPSED used N% █████░░░░░ REMAINING left`.
 - **Monthly limit** (Enterprise) — `M: $spent Nd used PCT% █████░░░░░ $remaining Md left`, sourced from the OAuth usage endpoint (see [caveats](#caveats)).
+- **Extra usage** (Pro/Max with pay-as-you-go credits) — same endpoint, but without a monthly utilization there is no meaningful bar or pace, so only the remaining credits are shown: `M: $10 left`.
 - **Progress bar** — 10 Unicode blocks that split *used* from *left*, visually representing the percentage (shown in the 7d and monthly segments).
 - **Daily pace** — answers "how much do I have per day" for the current billing window: `avg` is your current burn rate; `%/d left` (or `$/d left`) is the daily ceiling you can stay under to make it to the reset. The `avg` segment is colored by pace, not by fill: green while `avg` stays under the ceiling, yellow up to 1.5× over it, red beyond that (or once the budget is spent).
 - **Color coding** — green below 70%, yellow 70–84%, red at 85%+ on context, 5h, 7d, and monthly values (the 7d `avg` pace uses the pace rule above instead).
@@ -101,7 +102,7 @@ Coverage includes personal and Enterprise layouts, the post-startup placeholder 
 
 1. **The monthly usage endpoint is undocumented.** The `M:` segment reads from `https://api.anthropic.com/api/oauth/usage` (field `extra_usage`), an endpoint the community reverse-engineered from the Claude Code binary. Anthropic may change it at any time. There is a feature request ([issue #29300](https://github.com/anthropics/claude-code/issues/29300)) to expose monthly usage officially in the stdin JSON — switch to that once available.
 
-2. **Values are in cents, not USD.** `extra_usage.monthly_limit` and `used_credits` are in cents despite an adjacent `currency: "USD"` field; the script divides by 100. A $300/month Enterprise limit therefore appears as `30000`.
+2. **Values are in cents, not USD.** `extra_usage.monthly_limit` and `used_credits` are in cents despite an adjacent `currency` field; the script divides by 100. A $300/month Enterprise limit therefore appears as `30000`. The `currency` is not always `USD` (a EUR-billed account reports `EUR`), but amounts are always rendered with `$`.
 
 3. **The statusline has a ~300ms budget in Claude Code.** Hence the 60s cache and 2s curl timeout — the endpoint is actually called at most once per minute, otherwise the value is served from cache.
 
