@@ -429,6 +429,65 @@ OUT=$(run_with_date 17 31 "{
 }")
 assert_not_contains "Pro: no limit → no M segment"  "M:"  "$OUT"
 
+# ─── 2e. Currency symbol from the API ────────────────────────────────────────
+echo ""
+echo "[2e] Currency in the M segment"
+
+# EUR-billed account → € everywhere in the M segment (session cost stays $,
+# it comes from stdin's total_cost_usd).
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":22.0,"monthly_limit":30000,"used_credits":6700,"currency":"EUR"}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains     "EUR: spent + left"     "M: €67"        "$OUT"
+assert_contains     "EUR: remaining"        "€233 14d left" "$OUT"
+assert_contains     "EUR: daily pace"       "avg €3.94/d"   "$OUT"
+assert_contains     "EUR: session cost \$"  "s: \$0.50"     "$OUT"
+assert_not_contains "EUR: no \$ in M"       "M: \$"         "$OUT"
+
+# Pro form honours it too
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":1000,"used_credits":0.0,"currency":"EUR"}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains "EUR: Pro form"  "M: €10 left"  "$OUT"
+
+# GBP
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":1000,"used_credits":0.0,"currency":"GBP"}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains "GBP: £ symbol"  "M: £10 left"  "$OUT"
+
+# Unknown currency → the code itself is used as the prefix
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":1000,"used_credits":0.0,"currency":"CZK"}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains "unknown currency: code as prefix"  "M: CZK 10 left"  "$OUT"
+
+# Missing currency field → $
+set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":1000,"used_credits":0.0}}'
+OUT=$(run_with_date 17 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains "no currency field: defaults to \$"  "M: \$10 left"  "$OUT"
+
 # ─── 3. Coloring by percentage ───────────────────────────────────────────────
 echo ""
 echo "[3] Color by usage percentage"

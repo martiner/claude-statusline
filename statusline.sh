@@ -128,24 +128,32 @@ if [ -f "$USAGE_CACHE" ]; then
             (.extra_usage.is_enabled    // false),
             (.extra_usage.utilization   // ""),
             (.extra_usage.monthly_limit // ""),
-            (.extra_usage.used_credits  // "")
+            (.extra_usage.used_credits  // ""),
+            (.extra_usage.currency      // "USD")
         ' "$USAGE_CACHE" 2>/dev/null | tr -d '\r'
     )
     m_enabled="${m_fields[0]:-}"
     m_util="${m_fields[1]:-}"
     m_limit="${m_fields[2]:-}"
     m_used="${m_fields[3]:-}"
+    # Amounts are billed in the account's currency, not always USD.
+    case "${m_fields[4]:-USD}" in
+        USD|"") cur="$"  ;;
+        EUR)    cur="€"  ;;
+        GBP)    cur="£"  ;;
+        *)      cur="${m_fields[4]} " ;;  # unknown code as prefix: "CZK 250"
+    esac
     if [ "$m_enabled" = "true" ]; then
         # Enterprise reports a utilization %; Pro accounts with pay-as-you-go
         # credits send null, and get the plain "$X left" form below instead.
         month_pct=${m_util%.*}
 
-        # Dollar amounts (cents → USD, rounded to whole dollars).
+        # Money amounts (cents → whole units, rounded).
         if [ -n "$m_limit" ] && [ -n "$m_used" ] \
            && [ "$m_limit" != "null" ] && [ "$m_used" != "null" ]; then
-            money_used=$(awk -v u="$m_used" 'BEGIN{printf "$%.0f", u/100}')
-            money_left=$(awk -v u="$m_used" -v l="$m_limit" \
-                'BEGIN{r = (l - u) / 100; if (r < 0) r = 0; printf "$%.0f", r}')
+            money_used=$(awk -v c="$cur" -v u="$m_used" 'BEGIN{printf "%s%.0f", c, u/100}')
+            money_left=$(awk -v c="$cur" -v u="$m_used" -v l="$m_limit" \
+                'BEGIN{r = (l - u) / 100; if (r < 0) r = 0; printf "%s%.0f", c, r}')
             spent_pct=$(awk -v u="$m_used" -v l="$m_limit" \
                 'BEGIN{printf "%d", (l > 0 ? u * 100 / l : 0)}')
         fi
@@ -164,17 +172,17 @@ if [ -f "$USAGE_CACHE" ]; then
             days_remaining=$(( month_days - day_now ))
             [ "$days_remaining" -lt 0 ] && days_remaining=0
 
-            # Daily pace, only with both $ amounts.
-            [ -n "$money_used" ] && month_daily=$(awk -v u="$m_used" -v l="$m_limit" \
+            # Daily pace, only with both money amounts.
+            [ -n "$money_used" ] && month_daily=$(awk -v c="$cur" -v u="$m_used" -v l="$m_limit" \
                               -v e="$day_now" -v r="$days_remaining" \
                 'BEGIN{
                     if (e <= 0) e = 1
                     spent = u / 100 / e
                     if (l > u && r > 0) {
                         left = (l - u) / 100 / r
-                        printf "avg $%.2f/d • $%.2f/d left", spent, left
+                        printf "avg %s%.2f/d • %s%.2f/d left", c, spent, c, left
                     } else {
-                        printf "avg $%.2f/d", spent
+                        printf "avg %s%.2f/d", c, spent
                     }
                 }')
         fi
