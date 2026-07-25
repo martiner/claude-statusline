@@ -409,6 +409,20 @@ assert_not_contains "Pro: no days used"       "d used"       "$OUT"
 assert_not_contains "Pro: no daily pace"      "avg "         "$OUT"
 assert_not_contains "Pro: no '/d left'"       "/d left"      "$OUT"
 
+# Once credits are actually spent the endpoint fills in utilization (it is just
+# used_credits/monthly_limit), so the 5h/7d windows — which Enterprise doesn't
+# have — are what tells the two account types apart.
+set_cache '{"five_hour":{"utilization":60.0},"seven_day":{"utilization":27.0},"extra_usage":{"is_enabled":true,"utilization":29.6,"monthly_limit":1000,"used_credits":296.0}}'
+OUT=$(run_with_date 25 31 "{
+  \"model\":{\"display_name\":\"Opus 4.7\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0.5}
+}")
+assert_contains     "Pro with credits spent: \$ left"  "M: \$7 left" "$OUT"
+assert_not_contains "Pro with credits spent: no bar"   "░"           "$OUT"
+assert_not_contains "Pro with credits spent: no pace"  "avg "        "$OUT"
+
 # Partially spent credits: $30 limit, $12.50 used → $18 left
 set_cache '{"five_hour":null,"seven_day":null,"extra_usage":{"is_enabled":true,"utilization":null,"monthly_limit":3000,"used_credits":1250}}'
 OUT=$(run_with_date 17 31 "{

@@ -129,13 +129,15 @@ if [ -f "$USAGE_CACHE" ]; then
             (.extra_usage.utilization   // ""),
             (.extra_usage.monthly_limit // ""),
             (.extra_usage.used_credits  // ""),
-            (.extra_usage.currency      // "USD")
+            (.extra_usage.currency      // "USD"),
+            (.five_hour != null or .seven_day != null)
         ' "$USAGE_CACHE" 2>/dev/null | tr -d '\r'
     )
     m_enabled="${m_fields[0]:-}"
     m_util="${m_fields[1]:-}"
     m_limit="${m_fields[2]:-}"
     m_used="${m_fields[3]:-}"
+    m_windows="${m_fields[5]:-false}"
     # Amounts are billed in the account's currency, not always USD.
     case "${m_fields[4]:-USD}" in
         USD|"") cur="$"  ;;
@@ -144,9 +146,11 @@ if [ -f "$USAGE_CACHE" ]; then
         *)      cur="${m_fields[4]} " ;;  # unknown code as prefix: "CZK 250"
     esac
     if [ "$m_enabled" = "true" ]; then
-        # Enterprise reports a utilization %; Pro accounts with pay-as-you-go
-        # credits send null, and get the plain "$X left" form below instead.
-        month_pct=${m_util%.*}
+        # Rolling windows mean a subscription plan: extra_usage is then just the
+        # pay-as-you-go credit cap that kicks in past the plan limits, so only
+        # "$X left" is shown. Enterprise has no windows — the monthly budget is
+        # the whole budget, and gets the full form with bar and pace.
+        [ "$m_windows" = "false" ] && month_pct=${m_util%.*}
 
         # Money amounts (cents → whole units, rounded).
         if [ -n "$m_limit" ] && [ -n "$m_used" ] \
