@@ -604,6 +604,52 @@ else
     FAIL=$((FAIL+1)); printf '  %s✗%s avg far over pace should be red (ANSI 31)\n' "$RED" "$RESET"
 fi
 
+# ─── 3c. monthly avg pace colored by burn rate vs. sustainable "left" rate ────
+# Limit $300, day 17 of 31 (14 left) unless stated: ratio = avg/left =
+# 14·used/(17·(limit−used)). Utilization values put the month fill in a band
+# where the old fill-based color would differ from the pace-based one.
+echo ""
+echo "[3c] monthly avg pace color (ratio avg/left)"
+m_avg_raw() {  # $1 = used_credits (cents), $2 = utilization, $3 = day of month
+    set_cache "{\"five_hour\":null,\"seven_day\":null,\"extra_usage\":{\"is_enabled\":true,\"utilization\":$2,\"monthly_limit\":30000,\"used_credits\":$1}}"
+    echo "{
+      \"model\":{\"display_name\":\"Opus 4.7\"},
+      \"workspace\":{\"current_dir\":\"$REPO\"},
+      \"context_window\":{\"used_percentage\":5},
+      \"cost\":{\"total_cost_usd\":0.5}
+    }" | CLAUDE_STATUSLINE_TODAY="$3" CLAUDE_STATUSLINE_MONTH_DAYS=31 \
+         HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null
+}
+
+RAW=$(m_avg_raw 22200 74.0 30)   # avg $7.40 « left $78.00 → green despite 74% fill
+if [[ "$RAW" == *$'\033[32mavg $7.40'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s M avg under pace is green\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s M avg under pace should be green (ANSI 32)\n' "$RED" "$RESET"
+fi
+
+RAW=$(m_avg_raw 18000 60.0 17)   # ratio 1.24 → yellow despite 60% fill
+if [[ "$RAW" == *$'\033[33mavg $10.59'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s M avg slightly over pace is yellow\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s M avg slightly over pace should be yellow (ANSI 33)\n' "$RED" "$RESET"
+fi
+
+RAW=$(m_avg_raw 19500 65.0 17)   # ratio 1.53 → red despite 65% fill
+if [[ "$RAW" == *$'\033[31mavg $11.47'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s M avg far over pace is red\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s M avg far over pace should be red (ANSI 31)\n' "$RED" "$RESET"
+fi
+
+# Last day (days_remaining=0): no sustainable rate → falls back to month fill
+RAW=$(m_avg_raw 26100 87.0 31)   # 87% fill → red
+if [[ "$RAW" == *$'\033[31mavg $8.42'* ]]; then
+    PASS=$((PASS+1)); printf '  %s✓%s M avg at month end falls back to fill color\n' "$GREEN" "$RESET"
+else
+    FAIL=$((FAIL+1)); printf '  %s✗%s M avg at month end should use fill color (ANSI 31)\n' "$RED" "$RESET"
+fi
+
 # ─── 4. Git states ───────────────────────────────────────────────────────────
 echo ""
 echo "[4] Git detection"

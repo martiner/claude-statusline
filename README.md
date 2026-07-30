@@ -29,7 +29,7 @@ myproject • feature/billing | Claude Opus 4.7 • xhigh | ctx 22% • s: $1.20
 - **Extra usage** (Pro/Max with pay-as-you-go credits) — same endpoint. Here the monthly amount is only the credit cap that applies once you're past the plan limits, so a bar and a daily pace over it would be misleading; only the remaining credits are shown: `M: $10 left`. Amounts follow the account's billing currency (`$`, `€`, `£`).
 - **Progress bar** — 10 Unicode blocks that split *used* from *left*, visually representing the percentage (shown in the 7d and monthly segments).
 - **Daily pace** — answers "how much do I have per day" for the current billing window: `avg` is your current burn rate; `%/d left` (or `$/d left`) is the daily ceiling you can stay under to make it to the reset. The `avg` segment is colored by pace, not by fill: green while `avg` stays under the ceiling, yellow up to 1.5× over it, red beyond that (or once the budget is spent).
-- **Color coding** — green below 70%, yellow 70–84%, red at 85%+ on context, 5h, 7d, and monthly values (the 7d `avg` pace uses the pace rule above instead).
+- **Color coding** — green below 70%, yellow 70–84%, red at 85%+ on context, 5h, 7d, and monthly values (the `avg` pace segments use the pace rule above instead).
 - **Graceful degradation** — segments that don't apply to your account type are hidden. After Claude Code starts, before real data arrives, windows show `?` instead of a misleading `0%`.
 
 ## Installation

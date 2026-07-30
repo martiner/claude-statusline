@@ -114,7 +114,8 @@ fi
 
 # Read extra_usage (monthly) — only if is_enabled. monthly_limit and
 # used_credits are in cents, converted to USD below.
-month_pct=""; money_used=""; money_left=""; month_daily=""; day_now=""; days_remaining=""
+month_pct=""; money_used=""; money_left=""; month_daily=""; month_daily_code=""
+day_now=""; days_remaining=""
 spent_pct=""
 if [ -f "$USAGE_CACHE" ]; then
     # Can't use `read` with IFS=$'\t': bash collapses adjacent tabs (tab is a
@@ -176,19 +177,32 @@ if [ -f "$USAGE_CACHE" ]; then
             days_remaining=$(( month_days - day_now ))
             [ "$days_remaining" -lt 0 ] && days_remaining=0
 
-            # Daily pace, only with both money amounts.
-            [ -n "$money_used" ] && month_daily=$(awk -v c="$cur" -v u="$m_used" -v l="$m_limit" \
-                              -v e="$day_now" -v r="$days_remaining" \
-                'BEGIN{
-                    if (e <= 0) e = 1
-                    spent = u / 100 / e
-                    if (l > u && r > 0) {
-                        left = (l - u) / 100 / r
-                        printf "avg %s%.2f/d • %s%.2f/d left", c, spent, c, left
-                    } else {
-                        printf "avg %s%.2f/d", c, spent
-                    }
-                }')
+            # Daily pace, only with both money amounts. Colored like the 7d
+            # pace: by burn rate vs. the sustainable "left" rate (green <1.0,
+            # yellow <1.5, red ≥1.5). awk emits the ANSI code as a leading
+            # tab-separated field; the short form (month end or budget gone)
+            # has no "left" rate, so the code is empty and the color falls
+            # back to the month fill.
+            if [ -n "$money_used" ]; then
+                month_daily_raw=$(awk -v c="$cur" -v u="$m_used" -v l="$m_limit" \
+                                  -v e="$day_now" -v r="$days_remaining" \
+                    'BEGIN{
+                        if (e <= 0) e = 1
+                        spent = u / 100 / e
+                        if (l > u && r > 0) {
+                            left = (l - u) / 100 / r
+                            ratio = spent / left
+                            code = 32
+                            if      (ratio >= 1.5) code = 31
+                            else if (ratio >= 1.0) code = 33
+                            printf "%d\tavg %s%.2f/d • %s%.2f/d left", code, c, spent, c, left
+                        } else {
+                            printf "\tavg %s%.2f/d", c, spent
+                        }
+                    }')
+                month_daily_code="${month_daily_raw%%$'\t'*}"
+                month_daily="${month_daily_raw#*$'\t'}"
+            fi
         fi
     fi
 fi
@@ -351,7 +365,13 @@ if [ -n "$month_pct" ]; then
     [ -n "$money_left" ] && label="${label} ${money_left}"
     label="${label} ${days_remaining}d left"
     parts+=("$(color_by_pct "$month_pct" "$label")")
-    [ -n "$month_daily" ] && parts+=("$(color_by_pct "$month_pct" "$month_daily")")
+    if [ -n "$month_daily" ]; then
+        if [ -n "$month_daily_code" ]; then
+            parts+=("$(printf '\033[%sm%s\033[0m' "$month_daily_code" "$month_daily")")
+        else
+            parts+=("$(color_by_pct "$month_pct" "$month_daily")")
+        fi
+    fi
 elif [ -n "$money_left" ]; then
     parts+=("$(color_by_pct "$spent_pct" "M: ${money_left} left")")
 fi
