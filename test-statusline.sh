@@ -130,6 +130,7 @@ iso_in_days() {
         || date -u -r "$secs" '+%Y-%m-%dT%H:%M:%S.000000+00:00'
 }
 MONTH_ISO=$(iso_in_days 12)
+FIVE_CLOCK=$(date -d "@$FIVE_RESET" +%H:%M 2>/dev/null || date -r "$FIVE_RESET" +%H:%M)
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 echo "Statusline test suite"
@@ -255,6 +256,33 @@ OUT=$(run_script "{
 }")
 assert_matches      "5h: simple form"                    "5h: 42% • 2h1[45]m"      "$OUT"
 assert_not_contains "5h: no 'used'"                      "5h: 42% used"            "$OUT"
+assert_not_contains "5h below red: no reset clock"       "• $FIVE_CLOCK"           "$OUT"
+
+# In the red (>= 85%) the wall-clock reset time is appended
+OUT=$(run_script "{
+  \"model\":{\"display_name\":\"x\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0},
+  \"rate_limits\":{
+    \"five_hour\":{\"used_percentage\":90,\"resets_at\":$FIVE_RESET},
+    \"seven_day\":{\"used_percentage\":18,\"resets_at\":$WEEK_RESET}
+  }
+}")
+assert_matches      "5h red: reset clock appended"       "5h: 90% • 2h1[45]m • $FIVE_CLOCK" "$OUT"
+
+# Yellow (70-84%) stays without it
+OUT=$(run_script "{
+  \"model\":{\"display_name\":\"x\"},
+  \"workspace\":{\"current_dir\":\"$REPO\"},
+  \"context_window\":{\"used_percentage\":5},
+  \"cost\":{\"total_cost_usd\":0},
+  \"rate_limits\":{
+    \"five_hour\":{\"used_percentage\":84.4,\"resets_at\":$FIVE_RESET},
+    \"seven_day\":{\"used_percentage\":18,\"resets_at\":$WEEK_RESET}
+  }
+}")
+assert_matches      "5h yellow: no reset clock"          "5h: 84% • 2h1[45]m [|]"  "$OUT"
 
 # ─── 1d. Effort level (model • effort) ───────────────────────────────────────
 echo ""

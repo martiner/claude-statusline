@@ -10,12 +10,14 @@ export LC_NUMERIC=C
 input=$(cat)
 
 # === Color by usage percentage ===
+YELLOW_PCT=70
+RED_PCT=85
 color_by_pct() {
     local pct_int=${1%.*}; [ -z "$pct_int" ] && pct_int=0
     local text=$2
-    if   [ "$pct_int" -ge 85 ]; then printf '\033[31m%s\033[0m' "$text"
-    elif [ "$pct_int" -ge 70 ]; then printf '\033[33m%s\033[0m' "$text"
-    else                             printf '\033[32m%s\033[0m' "$text"
+    if   [ "$pct_int" -ge "$RED_PCT" ];    then printf '\033[31m%s\033[0m' "$text"
+    elif [ "$pct_int" -ge "$YELLOW_PCT" ]; then printf '\033[33m%s\033[0m' "$text"
+    else                                       printf '\033[32m%s\033[0m' "$text"
     fi
 }
 
@@ -40,6 +42,13 @@ format_duration() {
     if   [ "$days"  -gt 0 ]; then printf '%dd%dh'   "$days" "$hours"
     elif [ "$hours" -gt 0 ]; then printf '%dh%02dm' "$hours" "$mins"
     else                          printf '%dm'      "$mins"
+    fi
+}
+
+# === Epoch → local "09:35" ===
+format_clock() {
+    if [ "$(uname)" = "Darwin" ]; then date -r "$1" +%H:%M
+    else                                date -d "@$1" +%H:%M
     fi
 }
 
@@ -348,8 +357,11 @@ add_window_segment() {
         [ -n "$pace" ] && parts+=("$(printf '\033[%sm%s\033[0m' "$pace_code" "$pace")")
         return
     fi
-    # Simple form (5h): pct + time remaining.
-    parts+=("$(color_by_pct "$pct" "$prefix: ${pct_int}% • $(format_duration "$secs")")")
+    # Simple form (5h): pct + time remaining, plus the wall-clock reset time
+    # once the window is in the red.
+    local label="$prefix: ${pct_int}% • $(format_duration "$secs")"
+    [ "${pct%.*}" -ge "$RED_PCT" ] 2>/dev/null && label="$label • $(format_clock "$reset")"
+    parts+=("$(color_by_pct "$pct" "$label")")
 }
 add_window_segment "5h" "$five_pct" "$five_reset"
 add_window_segment "7d" "$week_pct" "$week_reset" 604800
