@@ -53,7 +53,7 @@ format_clock() {
 }
 
 # === Parse stdin JSON ===
-IFS=$'\t' read -r model effort cwd ctx_pct cost five_pct five_reset week_pct week_reset < <(
+IFS=$'\t' read -r model effort cwd ctx_pct cost five_pct five_reset week_pct week_reset cache_expires cache_ttl < <(
     echo "$input" | jq -r '
         [
             .model.display_name                       // "?",
@@ -64,7 +64,9 @@ IFS=$'\t' read -r model effort cwd ctx_pct cost five_pct five_reset week_pct wee
             (.rate_limits.five_hour.used_percentage   // 0),
             (.rate_limits.five_hour.resets_at         // 0),
             (.rate_limits.seven_day.used_percentage   // 0),
-            (.rate_limits.seven_day.resets_at         // 0)
+            (.rate_limits.seven_day.resets_at         // 0),
+            (.prompt_cache.expires_at                 // 0),
+            (.prompt_cache.ttl                        // "-")
         ] | @tsv
     ' | tr -d '\r'
 )
@@ -76,6 +78,7 @@ IFS=$'\t' read -r model effort cwd ctx_pct cost five_pct five_reset week_pct wee
 [ -z "$cost" ]       && cost=0
 [ -z "$five_pct" ]   && five_pct=0
 [ -z "$week_pct" ]   && week_pct=0
+[ -z "$cache_expires" ] && cache_expires=0
 
 # === Monthly limit from /api/oauth/usage (Enterprise) ===
 # Cached for 60s to stay within the status line's latency budget and the
@@ -285,8 +288,29 @@ if [ -n "$effort" ] && [ "$effort" != "-" ]; then
 else
     parts+=("$(printf '\033[90m%s\033[0m' "$model")")
 fi
-# group ctx (context fill, cleared by /clear) and session cost (cumulative, survives /clear) with a bullet
-session_part="$(color_by_pct "$ctx_pct" "ctx ${ctx_pct_int}%")${bullet}$(printf '\033[36m%s\033[0m' "$cost_fmt")"
+# Prompt cache expiry. Compared against `now` rather than `warm`, so it is right
+# whether or not `warm` was recomputed for this render.
+# expires_at is null (→ 0) before the first response or when it had no cache tokens.
+cache_part=""
+if [ "$cache_expires" -gt 0 ] 2>/dev/null; then
+    cache_left=$(( cache_expires - now ))
+    case "$cache_ttl" in
+        5m) cache_ttl_secs=300  ;;
+        *)  cache_ttl_secs=3600 ;;
+    esac
+    # Colored like a fill: the share of the TTL already used up.
+    cache_used_pct=$(( (cache_ttl_secs - cache_left) * 100 / cache_ttl_secs ))
+    if   [ "$cache_left" -le 0 ];  then cache_label="cache expired"
+    elif [ "$cache_left" -lt 60 ]; then cache_label="cache <1m"
+    else cache_label="cache $(format_duration "$cache_left")"
+    fi
+    cache_part=$(color_by_pct "$cache_used_pct" "$cache_label")
+fi
+
+# group ctx (context fill, cleared by /clear), prompt cache expiry and session cost (cumulative, survives /clear) with a bullet
+session_part="$(color_by_pct "$ctx_pct" "ctx ${ctx_pct_int}%")"
+[ -n "$cache_part" ] && session_part="${session_part}${bullet}${cache_part}"
+session_part="${session_part}${bullet}$(printf '\033[36m%s\033[0m' "$cost_fmt")"
 parts+=("$session_part")
 
 # 5h/7d windows — only if resets_at is in the future (else Enterprise or inactive).

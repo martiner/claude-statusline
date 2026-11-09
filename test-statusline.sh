@@ -297,6 +297,39 @@ OUT=$(run_script "{
 }")
 assert_contains "effort shown after bullet"  "Opus 4.7 • xhigh"  "$OUT"
 
+# ─── 1e. Prompt cache expiry (prompt_cache.expires_at) ──────────────────────
+echo ""
+echo "[1e] Prompt cache expiry in the ctx segment"
+set_cache ""
+# run_with_prompt_cache '<prompt_cache JSON object, or empty to omit it>'
+run_with_prompt_cache() {
+    local pc=""
+    [ -n "$1" ] && pc=",\"prompt_cache\":$1"
+    run_script "{
+      \"model\":{\"display_name\":\"x\"},
+      \"workspace\":{\"current_dir\":\"$REPO\"},
+      \"context_window\":{\"used_percentage\":12},
+      \"cost\":{\"total_cost_usd\":0.47}$pc
+    }"
+}
+
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW + 180))}")
+assert_matches  "time left after ctx"            "ctx 12% • cache [23]m • s: "  "$OUT"
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"1h\",\"expires_at\":$((NOW + 3000))}")
+assert_matches  "1h TTL: minutes left"           "cache (49|50)m"               "$OUT"
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW + 30))}")
+assert_contains "under a minute: <1m"            "cache <1m"                    "$OUT"
+# The data is from the last render; the cache may have gone cold since.
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW - 10))}")
+assert_contains "past expires_at: expired"       "cache expired"                "$OUT"
+OUT=$(run_with_prompt_cache "{\"warm\":false,\"ttl\":\"5m\",\"expires_at\":$((NOW - 10))}")
+assert_contains "cold: expired"                  "cache expired"                "$OUT"
+OUT=$(run_with_prompt_cache '{"warm":false,"caching_observed":true,"expires_at":null}')
+assert_not_contains "expires_at null: no cache"  "cache"                        "$OUT"
+OUT=$(run_with_prompt_cache "")
+assert_not_contains "no prompt_cache: no cache"  "cache"                        "$OUT"
+assert_contains     "no prompt_cache: ctx intact" "ctx 12% • s: \$0.47"        "$OUT"
+
 # ─── 2. Enterprise — monthly limit ───────────────────────────────────────────
 echo ""
 echo "[2] Enterprise (monthly limit only, no 5h/7d)"
@@ -677,6 +710,26 @@ if [[ "$RAW" == *$'\033[31mavg $8.42'* ]]; then
 else
     FAIL=$((FAIL+1)); printf '  %s✗%s M avg at month end should use fill color (ANSI 31)\n' "$RED" "$RESET"
 fi
+
+# ─── 3d. Prompt cache color (share of the TTL used up) ──────────────────────
+echo ""
+echo "[3d] prompt cache color (TTL used up)"
+set_cache ""
+# cache_raw TTL SECS_LEFT → raw (ANSI) output
+cache_raw() {
+    echo "{
+      \"model\":{\"display_name\":\"x\"},
+      \"context_window\":{\"used_percentage\":5},
+      \"cost\":{\"total_cost_usd\":0},
+      \"prompt_cache\":{\"warm\":true,\"ttl\":\"$1\",\"expires_at\":$((NOW + $2))}
+    }" | HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null
+}
+assert_contains "1h, 50m left (17% used) is green"   $'\033[32mcache '        "$(cache_raw 1h 3000)"
+assert_contains "1h, 15m left (75% used) is yellow"  $'\033[33mcache '        "$(cache_raw 1h 900)"
+assert_contains "1h, 5m left (92% used) is red"      $'\033[31mcache '        "$(cache_raw 1h 300)"
+assert_contains "5m, 80s left (73% used) is yellow"  $'\033[33mcache '        "$(cache_raw 5m 80)"
+assert_contains "5m, <1m left is red"                $'\033[31mcache <1m'     "$(cache_raw 5m 30)"
+assert_contains "expired is red"                     $'\033[31mcache expired' "$(cache_raw 1h -10)"
 
 # ─── 4. Git states ───────────────────────────────────────────────────────────
 echo ""
