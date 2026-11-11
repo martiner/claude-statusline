@@ -313,16 +313,16 @@ run_with_prompt_cache() {
     }"
 }
 
-OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW + 180))}")
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$(( $(date +%s) + 180 ))}")
 assert_matches  "time left after ctx"            "ctx 12% • cache [23]m • s: "  "$OUT"
-OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"1h\",\"expires_at\":$((NOW + 3000))}")
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"1h\",\"expires_at\":$(( $(date +%s) + 3000 ))}")
 assert_matches  "1h TTL: minutes left"           "cache (49|50)m"               "$OUT"
-OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW + 30))}")
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$(( $(date +%s) + 30 ))}")
 assert_contains "under a minute: <1m"            "cache <1m"                    "$OUT"
 # The data is from the last render; the cache may have gone cold since.
-OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$((NOW - 10))}")
+OUT=$(run_with_prompt_cache "{\"warm\":true,\"ttl\":\"5m\",\"expires_at\":$(( $(date +%s) - 10 ))}")
 assert_contains "past expires_at: expired"       "cache expired"                "$OUT"
-OUT=$(run_with_prompt_cache "{\"warm\":false,\"ttl\":\"5m\",\"expires_at\":$((NOW - 10))}")
+OUT=$(run_with_prompt_cache "{\"warm\":false,\"ttl\":\"5m\",\"expires_at\":$(( $(date +%s) - 10 ))}")
 assert_contains "cold: expired"                  "cache expired"                "$OUT"
 OUT=$(run_with_prompt_cache '{"warm":false,"caching_observed":true,"expires_at":null}')
 assert_not_contains "expires_at null: no cache"  "cache"                        "$OUT"
@@ -721,7 +721,7 @@ cache_raw() {
       \"model\":{\"display_name\":\"x\"},
       \"context_window\":{\"used_percentage\":5},
       \"cost\":{\"total_cost_usd\":0},
-      \"prompt_cache\":{\"warm\":true,\"ttl\":\"$1\",\"expires_at\":$((NOW + $2))}
+      \"prompt_cache\":{\"warm\":true,\"ttl\":\"$1\",\"expires_at\":$(( $(date +%s) + $2 ))}
     }" | HOME="$FAKE_HOME" bash "$SCRIPT" 2>/dev/null
 }
 assert_contains "1h, 50m left (17% used) is green"   $'\033[32mcache '        "$(cache_raw 1h 3000)"
